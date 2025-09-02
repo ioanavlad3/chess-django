@@ -1,0 +1,44 @@
+<!-- <h1>Welcome, {{ username }}!</h1>
+<a href="/">Log out</a> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Page</title>
+    <link rel="stylesheet" href="../../static/hello/welcome.css">
+</head>
+<body>
+ <!--  <h1>Welcome, {{ username }}!</h1> --> 
+    <div class = "logout">
+        <a href = "/">Log out</a>
+    </div>
+    
+    <div class = "board">
+        <form id="createRoomForm" method="POST" action="{% url 'create_room' %}">
+            {% csrf_token %}
+            <input type="hidden" name="time_per_player" id="timeInput">
+            <button type="button" onclick="askTimeAndSubmit()">Create Room</button>
+        </form>
+
+        <a href="{% url 'join_room_list' %}"><button>Join Room</button></a>
+        <a href="{% url 'history' %}"><button> History </button></a>
+
+    </div>
+
+    
+<script>
+    function askTimeAndSubmit() {
+        let minutes = prompt("Enter time per player (in minutes):", "5");
+        if (minutes !== null && !isNaN(minutes) && parseInt(minutes) > 0) {
+            document.getElementById('timeInput').value = parseInt(minutes);
+            document.getElementById('createRoomForm').submit();
+        } else {
+            alert("Please enter a valid number of minutes.");
+        }
+    }
+</script>
+
+</body>
+</html>

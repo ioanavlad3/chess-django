@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Room List</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+    }
+
+    body {
+      background-image: url('../../static/hello/background-image.jpeg');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed; 
+      background-position: center;
+      font-family: sans-serif;
+      color: black;
+    }
+
+    .room-list {
+      display: flex;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    .room-list ul {
+      list-style: none;
+      background: rgba(255, 255, 255, 0.8); 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      border-radius: 8px;
+      max-width: 600px;
+      width: 90%;
+    }
+
+    .room-list li {
+      padding: 5px;
+    }
+
+    h1, p {
+      text-align: center;
+      color: #222;
+      margin-top: 20px;
+    }
+
+    a {
+      display: block;
+      text-align: center;
+      /* margin: 1px auto; */
+      color: blueviolet;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .room-list button{
+      background: transparent;
+      border-color: black ;
+      border-radius: 10px;
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+
+    .room-list button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      color: crimson;
+    }
+
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">Available Rooms</h1>
+
+  <div class="room-list">
+    <ul>
+      {% for game in games %}
+        <li>
+          Room {{ game.id }} - White: {{ game.player_white }} 
+          <a href="{% url 'join_room' game.id %}"><button>Join</button></a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</body>
+
+
+
+</html>

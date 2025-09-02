@@ -1,0 +1,6 @@
+/* chessboard.css v1.0.0 minified */
+.chessboard {width: 400px; height: 400px; background: #eee;}
+.square-55d63 {width: 12.5%; height: 12.5%; float: left;}
+.white-1e1d7 {background-color: #f0d9b5;}
+.black-3c85d {background-color: #b58863;}
+.highlight1-32417, .highlight2-9c5d2 {background-color: rgba(255, 255, 0, 0.5);}

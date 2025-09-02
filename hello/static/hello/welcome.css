@@ -1,0 +1,38 @@
+body {
+  margin: 0;
+  height: 100vh;
+  background: url("background-image.jpeg") no-repeat center center fixed;
+  background-size: cover;
+  font-family: Arial, sans-serif;
+}
+
+/* logout button at top right */
+.logout {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+/* center buttons */
+.board {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  gap: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  width: 150px;
+  background-color: lightpink;
+  border-radius: 10px;
+}
+
+button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  color: crimson;
+}

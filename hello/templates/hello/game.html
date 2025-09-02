@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Room {{ game.id }}</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+    <style>
+        #myBoard {
+            width: 90%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        h1, p {
+            text-align: center;
+        }
+        #roomInput {
+            display: block;
+            margin: 20px auto;
+            padding: 5px;
+            text-align: center;
+        }
+        body {
+            margin: 0;
+            height: 100vh;
+            background: url("../../static/hello/background-image.jpeg") no-repeat center center fixed;
+            background-size: cover;
+        }
+        .square-55d63.highlight {
+            box-shadow: inset 0 0 10px yellow;
+        }
+    </style>
+</head>
+<body>
+    <h1>Game Room {{ game.id }}</h1>
+
+    <p>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg" alt="White" style="height: 24px; vertical-align: middle;">
+        <span id="playerWhite">{{ game.player_white }}</span>
+        <span id="white-timer"></span>
+    </p>
+    <p>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg" alt="Black" style="height: 24px; vertical-align: middle;">
+        <span id="playerBlack">{{ game.player_black|default:"Waiting for player" }}</span> 
+        <span id="black-timer"></span></p>
+    </p>
+    <p id="status"></p>
+    <div id="myBoard"></div>
+    <div id="gameOverModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+    background-color: rgba(0, 0, 0, 0.7); z-index: 1000; text-align:center;">
+        <div style="background:rgb(255, 192, 252); padding:30px; margin:15% auto; width:300px; border-radius:10px;">
+            <h2 id="winnerMessage">Game Over</h2>
+            <button onclick="requestRematch()" style="margin-top:15px; padding:10px 20px; font-size:16px; border-radius: 10px; 
+            border-color: blueviolet; background: rgb(255, 192, 252);">Replay</button>
+        </div>
+    </div>
+
+    <input type="text" id="roomInput" placeholder="Enter Room Code" value="{{ room_name|default:'defaultRoom' }}">
+    <button onclick="joinRoom()">Join Room</button> 
+    <script>
+        var game = new Chess();
+        var board;
+        var roomName = "{{ room_name|default:'defaultRoom'|escapejs }}";
+        var gameId = "{{ game.id }}";
+        var lastFen = game.fen();
+        var username = "{{ username|escapejs }}";
+        var playerWhite = "{{ game.player_white|escapejs }}";
+        var playerBlack = "{{ game.player_black|default:''|escapejs }}";
+
+        // Debugging
+        console.log("Initial Username:", username);
+        console.log("Initial Player White:", playerWhite);
+        console.log("Initial Player Black:", playerBlack);
+        console.log("Room Name:", roomName);
+        console.log("Game ID:", gameId);
+
+        // Determine board orientation
+        var orientation = 'white';
+        if (username === playerWhite) {
+            orientation = 'white';
+        } else if (username === playerBlack) {
+            orientation = 'black';
+        }
+        console.log("Initial Selected orientation:", orientation);
+
+        var config = {
+            draggable: true,
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            orientation: orientation,
+            onDragStart: function(source, piece, position, orientation) {
+                // Prevent dragging if game is over
+                if (game.game_over()) {
+                    console.log("Game over, no moves allowed");
+                    return false;
+                }
+                // Allow white player to move only white pieces when it's white's turn
+                if (username === playerWhite) {
+                    if (game.turn() !== 'w' || piece.search(/^b/) !== -1) {
+                        console.log("White player attempted to move black piece or move out of turn");
+                        return false;
+                    }
+                }
+                // Allow black player to move only black pieces when it's black's turn
+                else if (username === playerBlack) {
+                    if (game.turn() !== 'b' || piece.search(/^w/) !== -1) {
+                        console.log("Black player attempted to move white piece or move out of turn");
+                        return false;
+                    }
+                }
+                // Allow spectators to view but not move
+                else {
+                    console.log("Spectator attempted to move, not allowed");
+                    return false;
+                }
+
+                // Calculate and highlight legal moves
+                var moves = game.moves({ square: source, verbose: true });
+                console.log("Legal moves for", source, ":", moves);
+
+                function removeHighlights() {
+                    $('#myBoard .square-55d63').removeClass('highlight');
+                }
+
+               // Highlight legal move destinations
+                moves.forEach(function(move) {
+                    $('#myBoard .square-' + move.to).addClass('highlight');
+                });
+
+                return true;
+            },
+            onDrop: function(source, target) {
+                // Remove highlights when piece is dropped
+                $('.square-55d63').removeClass('highlight');
+                var move = game.move({
+                    from: source,
+                    to: target,
+                });
+                if (move === null) {
+                    console.log("Invalid move attempted");
+                    return 'snapback';
+                }
+                submitMove(game.fen());
+                updateStatus();
+            },
+            onSnapEnd: function() {
+                // Remove highlights after move is completed
+                $('.square-55d63').removeClass('highlight');
+                board.position(game.fen());
+            },
+            onMouseoutSquare: function(square, piece) {
+                // Remove highlights when mouse leaves a square
+                $('.square-55d63').removeClass('highlight');
+            },
+            onMouseoverSquare: function(square, piece) {
+                // Re-highlight legal moves when hovering over a piece
+                if (piece && (
+                    (username === playerWhite && game.turn() === 'w' && piece.search(/^w/) !== -1) ||
+                    (username === playerBlack && game.turn() === 'b' && piece.search(/^b/) !== -1)
+                )) {
+                    var moves = game.moves({ square: square, verbose: true });
+                    console.log("Hover legal moves for", square, ":", moves);
+                    $('.square-55d63').removeClass('highlight');
+                    moves.forEach(function(move) {
+                        $('#myBoard .square-' + move.to).addClass('highlight');
+                    });
+                }
+            }
+        };
+
+        let timePerPlayer = parseInt("{{ time_per_player|default:5 }}") * 60;
+
+        let timerStarted = false;
+
+        let whiteTime = timePerPlayer;
+        let blackTime = timePerPlayer;
+        let timerInterval = null;
+
+        function replayGame() {
+            location.reload(); 
+        }
+
+
+        function joinRoom() {
+            roomName = document.getElementById('roomInput').value || roomName;
+            console.log("Joined room:", roomName);
+            board = Chessboard('myBoard', config);
+            console.log("Board initialized with orientation:", config.orientation);
+            pollForMove();
+            pollForGameState();
+            updateTimers();
+
+        }
+
+        function submitMove(fen) {
+            $.ajax({
+                url: '/submit-move/',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ fen: fen, room: roomName }),
+                success: function(response) {
+                    console.log("Move submitted:", response.fen);
+                    lastFen = response.fen;
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error submitting move:", error);
+                    game.undo();
+                    board.position(game.fen());
+                }
+            });
+        }
+
+        function pollForMove() {
+            $.ajax({
+                url: '/get-latest-move/?room=' + roomName,
+                method: 'GET',
+                success: function(response) {
+                    console.log("Polled move:", response.fen);
+                    if (response.fen && response.fen !== lastFen) {
+                        game.load(response.fen);
+                        board.position(response.fen);
+                        lastFen = response.fen;
+                        updateStatus();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error polling move:", error);
+                },
+                complete: function() {
+                    setTimeout(pollForMove, 1000);
+                }
+            });
+        }
+
+        function pollForGameState() {
+            $.ajax({
+                url: '/get-game-state/' + gameId + '/',
+                method: 'GET',
+                success: function(response) {
+                    console.log("Polled game state:", response);
+                    $('#playerWhite').text(response.player_white);
+                    $('#playerBlack').text(response.player_black);
+                    if (response.player_black && username === response.player_black && config.orientation !== 'black') {
+                        config.orientation = 'black';
+                        board = Chessboard('myBoard', config);
+                        console.log("Reinitialized board with orientation: black");
+                    } else if (username === response.player_white && config.orientation !== 'white') {
+                        config.orientation = 'white';
+                        board = Chessboard('myBoard', config);
+                        console.log("Reinitialized board with orientation: white");
+                    }
+                    if (response.player_white && response.player_black && response.player_black !== "Waiting for player" && !timerStarted) {
+                        startTimer();
+                        timerStarted = true;
+                        console.log("Both players present — timer started");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error polling game state:", error);
+                },
+                complete: function() {
+                    setTimeout(pollForGameState, 1000);
+                }
+            });
+        }
+
+        function updateStatus() {
+            var status = '';
+            if (game.in_checkmate()) {
+                var winner;
+                if (username === playerWhite && game.turn() === 'b') {
+                    winner = 'white';
+                } else if (username === playerBlack && game.turn() === 'w') {
+                    winner = 'black';
+                } else {
+                    winner = game.turn() === 'w' ? 'black' : 'white';
+                }
+
+                document.getElementById('winnerMessage').innerText = winner + ' wins by checkmate!';
+                document.getElementById('gameOverModal').style.display = 'block';
+
+                $.ajax({
+                    url: '/save-winner/',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ game_id: gameId, winner: winner }),
+                    success: function(response) {
+                        console.log("Winner saved:", response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error saving winner:", error);
+                    }
+                });
+
+            } else if (game.in_draw()) {
+                status = 'Game over, drawn position';
+                document.getElementById('winnerMessage').innerText = 'Draw!';
+                document.getElementById('gameOverModal').style.display = 'block';
+            } else {
+                status = (game.turn() === 'w' ? 'White' : 'Black') + ' to move';
+                if (game.in_check()) {
+                    status += ', in check';
+                }
+            }
+            document.getElementById('status').innerText = status;
+        }
+
+        function pollForRematch() {
+            $.ajax({
+                url: '/request-rematch/',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ room: roomName, username: username }),
+                success: function(response) {
+                    if (response.status === 'waiting') {
+                        document.getElementById('winnerMessage').innerText = "Waiting for opponent to accept rematch...";
+                        setTimeout(pollForRematch, 1000); // Verify every second
+                    } else if (response.status === 'ready') {
+                        window.location.href = '/game/' + response.new_game_id + '/';
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Rematch polling error:", error);
+                }
+            });
+        }
+
+        function requestRematch() {
+            $.ajax({
+                url: '/request-rematch/',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ room: roomName, username: username }),
+                success: function(response) {
+                    if (response.status === 'waiting') {
+                        document.getElementById('winnerMessage').innerText = "Waiting for opponent to accept rematch...";
+                        pollForRematch();
+                    } else if (response.status === 'ready') {
+                        window.location.href = '/game/' + response.new_game_id + '/';
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Rematch error:", error);
+                }
+            });
+        }
+
+        function formatTime(seconds) {
+            let min = Math.floor(seconds / 60);
+            let sec = seconds % 60;
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        function updateTimers() {
+            document.getElementById('white-timer').innerText = formatTime(whiteTime);
+            document.getElementById('black-timer').innerText = formatTime(blackTime);
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (game.game_over()) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                if (game.turn() === 'w') {
+                    whiteTime--;
+                    if (whiteTime <= 0) {
+                        clearInterval(timerInterval);
+                        endByTimeout("white");
+                    }
+                } else {
+                    blackTime--;
+                    if (blackTime <= 0) {
+                        clearInterval(timerInterval);
+                        endByTimeout("black");
+                    }
+                }
+
+                updateTimers();
+            }, 1000);
+        }
+
+        function endByTimeout(color) {
+            const winner = color === "white" ? "black" : "white";
+            document.getElementById('winnerMessage').innerText = winner + " wins on time!";
+            document.getElementById('gameOverModal').style.display = 'block';
+
+            $.ajax({
+                url: '/save-winner/',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ game_id: gameId, winner: winner }),
+                success: function(response) {
+                    console.log("Winner saved (timeout):", response);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error saving winner:", error);
+                }
+            });
+        }
+
+
+
+        joinRoom();
+    </script>
+</body>
+</html>

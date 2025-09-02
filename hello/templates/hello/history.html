@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game History</title>
+    <style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+    }
+
+    body {
+        background-image: url('../../static/hello/background-image.jpeg');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        background-position: center;
+        font-family: sans-serif;
+        color: black;
+    }
+
+    .history_list {
+        display: flex;
+        justify-content: center;
+        margin-top: 40px;
+    }
+
+    .history_list ul {
+        list-style: none;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.8); 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        max-width: 600px;
+        width: 90%;
+    }
+
+    .history_list li {
+        padding: 10px;
+    }
+
+    h1, p {
+        text-align: center;
+        color: #222;
+        margin-top: 20px;
+    }
+
+    a {
+        display: block;
+        text-align: center;
+        margin: 40px auto;
+        color: blueviolet;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    </style>
+
+</head>
+<body>
+    <p>Total Games: {{ games|length }}</p>
+
+    <h1>Your previous games:</h1>
+
+    <div class="history_list">
+
+    <ul>
+        {% for game in games %}
+            <li>
+                {{ game.id }} — {{ game.player_white }} vs {{ game.player_black }} —
+                Winner: {{ game.winner|default:"tie" }}
+            </li>
+        {% empty %}
+            <li>No games yet.</li>
+        {% endfor %}
+    </ul>
+
+    </div>
+
+
+    <a href="{% url 'welcome' %}">Back</a>
+</body>
+</html>
