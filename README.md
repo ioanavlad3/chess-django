@@ -3,6 +3,9 @@
 A 2-player chess game built with Django and AJAX.
 The app supports user authentication, real-time gameplay, game room management, and match history tracking.
 
+<h2>Demo</h2>
+![Demo gameplay](https://github.com/user-attachments/assets/e330811c-6a89-4d7b-82db-bc83763cfc12)
+
  <h2>Features</h2>
 <h4>Authentication & Registration</h4>
 <ul>
